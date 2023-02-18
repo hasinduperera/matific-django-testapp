@@ -3,13 +3,17 @@
 		Networking :
 			Single region
 			Single VPC 
-			minimum 2 subnets for higher availability ( 2 public subnets for ALB / 2 private subnet for ECS / 2 private subnets for EFS/RDS ) We can concider 9 subnets too.		
+			minimum 4 subnets for higher availability ( 2 public subnets for ALB / 2 private subnet for ECS / optional 2 private subnets for EFS/RDS ) We can concider 9 subnets too.
+			single Internet gateway on public subnets
+			single NAT gateway on public subnets
+			Attach private route table to private subnets
+			Attach public route table to public subnets
 			DNS :
 				I will be using Route 53 public hosted zone and create A (alias) record set pointing to ALB
 				(If we are using a third party domain registar, I will be concidering to delegate DNS management to Route 53 for higher availability easy management along with some routing methods)
 			
 		Security :
-			3 Security groups ( 1 for ALB / 1 for ECS / 1 for EFS/RDS )
+			2 Security groups ( 1 for ALB / 1 for ECS / optional 1 for EFS/RDS )
 			WAF attached to ALB with AWS managed rules for the time being and later we can restric further
 			Also I will be enabling ECR image scanning to find and notify image vulnerabilities
 			Also I will be concidering cloud custodian rule evaluation to maintain cloud standards and best practices (tagging / naming / security restrictions etc ) as a cloud governance measure
