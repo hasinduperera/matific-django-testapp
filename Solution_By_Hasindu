@@ -50,8 +50,10 @@
 		Then there should be some static code analysing setup such as sonarqube / veracode or atleast lint checker as a quality gate. If it's passed only someone can review and approve.
 		Once it is peer reviewed and approved it will be merged to master branch or environmental branch (lower to production ) based on that, github actions will build the image and push it to ECR.
 	Once it's in ECR we can deploy the new application or the latest version to ECS cluster as a roling update.
-	
+
 	folder structure :
-		application
-		infrastructure
-		deployment
+		application : application source code and dockerfile
+		infrastructure : infrastructure as code
+		.github/workflow : github actions
+
+	I should consider creating application and infrastrucutre/deplpoyment specific reposiotories for better management and also I will consider creating Multi repository deployment where application repository will be accessed from infrastrucutre/deployment repo workflow.
