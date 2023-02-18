@@ -40,29 +40,29 @@ jobs:
           cdk deploy --require-approval never
 
       - name: Login to Amazon ECR
-          id: login-ecr
-          uses: aws-actions/amazon-ecr-login@v2
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build and push Docker image to Amazon ECR
-          env:
-            ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-            ECR_REPOSITORY: matific-django-testapp
-          run: |
-            docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
-            docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: matific-django-testapp
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
       - name: Application deployment
-          env:
-            AWS_DEFAULT_REGION: us-east-1 # or preferred AWS region / I would concider variablized based on the environment
-            CLUSTER_NAME: matific-django-ecs-cluster
-            SERVICE_NAME: testapp-ecs-service
-          run: |
-            # Get the latest revision of the ECS task definition
-            TASK_DEFINITION=$(aws ecs describe-services --cluster $CLUSTER_NAME --services $SERVICE_NAME --query 'services[0].taskDefinition' --output text)
+        env:
+          AWS_DEFAULT_REGION: us-east-1 # or preferred AWS region / I would concider variablized based on the environment
+          CLUSTER_NAME: matific-django-ecs-cluster
+          SERVICE_NAME: testapp-ecs-service
+        run: |
+          # Get the latest revision of the ECS task definition
+          TASK_DEFINITION=$(aws ecs describe-services --cluster $CLUSTER_NAME --services $SERVICE_NAME --query 'services[0].taskDefinition' --output text)
 
-            # Create a new revision of the ECS task definition with the updated image
-            NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "$ECR_REGISTRY/$ECR_REPOSITORY:latest" '.taskDefinition | fromjson | .containerDefinitions[0].image = $IMAGE | . | tostring')
-            REGISTERED_TASK_DEFINITION=$(aws ecs register-task-definition --cli-input-json "$NEW_TASK_DEFINITION" --query 'taskDefinition.taskDefinitionArn' --output text)
+          # Create a new revision of the ECS task definition with the updated image
+          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "$ECR_REGISTRY/$ECR_REPOSITORY:latest" '.taskDefinition | fromjson | .containerDefinitions[0].image = $IMAGE | . | tostring')
+          REGISTERED_TASK_DEFINITION=$(aws ecs register-task-definition --cli-input-json "$NEW_TASK_DEFINITION" --query 'taskDefinition.taskDefinitionArn' --output text)
 
-            # Update the ECS service with the new task definition
-            aws ecs update-service --cluster $CLUSTER_NAME --service $SERVICE_NAME --task-definition $REGISTERED_TASK_DEFINITION
+          # Update the ECS service with the new task definition
+          aws ecs update-service --cluster $CLUSTER_NAME --service $SERVICE_NAME --task-definition $REGISTERED_TASK_DEFINITION
