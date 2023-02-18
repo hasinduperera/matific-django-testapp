@@ -39,11 +39,11 @@ jobs:
           cd infrastructure
           cdk deploy --require-approval never
 
-- name: Login to Amazon ECR
+name: Login to Amazon ECR
   id: login-ecr
   uses: aws-actions/amazon-ecr-login@v2
 
-- name: Build and push Docker image to Amazon ECR
+name: Build and push Docker image to Amazon ECR
   env:
     ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
     ECR_REPOSITORY: matific-django-testapp
@@ -51,7 +51,7 @@ jobs:
     docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
     docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
-- name: CDK Deploy / Application deployment
+name: CDK Deploy / Application deployment
   env:
     AWS_DEFAULT_REGION: us-east-1 # or preferred AWS region / I would concider variablized based on the environment
     CLUSTER_NAME: matific-django-ecs-cluster
