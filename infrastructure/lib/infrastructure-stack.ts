@@ -1,6 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as ec2 from "aws-cdk-lib/aws-ec2";
+import { IpAddresses } from 'aws-cdk-lib/aws-ec2';
 // import * as sqs from 'aws-cdk-lib/aws-sqs';
 
 export class InfrastructureStack extends cdk.Stack {
@@ -9,7 +10,7 @@ export class InfrastructureStack extends cdk.Stack {
     
     // Create VPC
     const vpc = new ec2.Vpc(this, 'TestAppVPC', {
-      cidr: '10.0.0.0/16',
+      ipAddresses: IpAddresses.cidr('10.0.0.0/16'),
       maxAzs: 2,
       subnetConfiguration: [
         {
@@ -71,14 +72,14 @@ export class InfrastructureStack extends cdk.Stack {
     });
 
     // Associate Route Tables with Subnets
-    vpc.publicSubnets.forEach((subnet) => {
-      new ec2.CfnSubnetRouteTableAssociation(this, `TestAppPublicSubnetRouteTableAssociation${subnet.availabilityZone}`, {
+    vpc.publicSubnets.forEach((subnet, i) => {
+      new ec2.CfnSubnetRouteTableAssociation(this, `TestAppPubRTAssociation${i}`, {
         subnetId: subnet.subnetId,
         routeTableId: publicRouteTable.ref,
       });
     });
-    vpc.privateSubnets.forEach((subnet) => {
-      new ec2.CfnSubnetRouteTableAssociation(this, `TestAppPrivateSubnetRouteTableAssociation${subnet.availabilityZone}`, {
+    vpc.privateSubnets.forEach((subnet, i) => {
+      new ec2.CfnSubnetRouteTableAssociation(this, `TestAppPrvRTAssociation${i}`, {
         subnetId: subnet.subnetId,
         routeTableId: privateRouteTable.ref,
       });
