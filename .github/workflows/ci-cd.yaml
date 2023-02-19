@@ -88,8 +88,8 @@ jobs:
 
       - name: Application deployment
         env:
-          CLUSTER_NAME: matific-django-ecs-cluster
-          SERVICE_NAME: testapp-ecs-service
+          CLUSTER_NAME: TestAppECSCluster
+          SERVICE_NAME: TestAppECSService
         run: |
           # Get the latest revision of the ECS task definition
           TASK_DEFINITION=$(aws ecs describe-services --cluster $CLUSTER_NAME --services $SERVICE_NAME --query 'services[0].taskDefinition' --output text)
