@@ -1,10 +1,12 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as ec2 from "aws-cdk-lib/aws-ec2";
-import { IpAddresses } from 'aws-cdk-lib/aws-ec2';
+import { IpAddresses, Port, PublicSubnet, SecurityGroup } from 'aws-cdk-lib/aws-ec2';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
+import { Service } from 'aws-cdk-lib/aws-servicediscovery';
+import { ContainerDefinition } from 'aws-cdk-lib/aws-ecs';
 
 // all resources should be tagged accordingly
 
@@ -99,7 +101,7 @@ export class InfrastructureStack extends cdk.Stack {
     });
     albSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(80), 'Allow HTTP traffic');
 
-    // Create a security group for the EC2 instances
+    // Create a security group for the ECS 
     const ecsSecurityGroup = new ec2.SecurityGroup(this, 'ECSSecurityGroup', {
       vpc,
       allowAllOutbound: true,
@@ -116,6 +118,8 @@ export class InfrastructureStack extends cdk.Stack {
       clusterName: 'TestAppECSCluster',
     });
 
+    ecsCluster.connections.allowFrom(ecsSecurityGroup, ec2.Port.allTraffic());
+
     // Create an ECS task definition
     const taskDefinition = new ecs.TaskDefinition(this, 'TestAppDefinition', {
       compatibility: ecs.Compatibility.FARGATE,
@@ -131,28 +135,27 @@ export class InfrastructureStack extends cdk.Stack {
         KEY: 'VALUE',
       },
     });
+    containerDefinition.addPortMappings({
+      containerPort: 8000,
+      hostPort: 8000,
+      protocol: ecs.Protocol.TCP,
+    });
 
     // Create an Application Load Balancer
+    const publicSubnetSelection = { subnetType: ec2.SubnetType.PUBLIC };
     const loadBalancer = new elbv2.ApplicationLoadBalancer(this, 'TestAppLoadBalancer', {
       vpc: vpc,
       internetFacing: true,
       securityGroup: albSecurityGroup,
+      vpcSubnets: publicSubnetSelection
+      
     });
 
     // Create a listener for the load balancer
     const listener = loadBalancer.addListener('TestAppListener', {
       port: 80,
       open: true,
-    });
-
-    // Create a target group for the load balancer
-    const targetGroup = listener.addTargets('TestAppTargetGroup', {
-      targets: [new ecs.LoadBalancerTarget(containerDefinition)],
-      port: 8000,
-      healthCheck: {
-        path: '/',
-      },
-    });
+    }); 
 
     // Add a service to the ECS cluster
     const ecsService = new ecs.FargateService(this, 'TestAppECSService', {
@@ -160,12 +163,22 @@ export class InfrastructureStack extends cdk.Stack {
       taskDefinition: taskDefinition,
       desiredCount: 2,
       serviceName: 'TestAppECSService',
-      securityGroup: ecsSecurityGroup,
-      assignPublicIp: true,
+      securityGroups: [ ecsSecurityGroup ],
+      assignPublicIp: false,
       platformVersion: ecs.FargatePlatformVersion.VERSION1_4,
-      cloudMapOptions: {
-        name: 'TestAppCloudMapService',
+    });
+    
+    // Create a target group for the load balancer
+    const targetGroup = listener.addTargets('TestAppTargetGroup', {
+      targets: [ecsService.loadBalancerTarget({
+        containerName: 'TestAppContainer',
+        containerPort: 8000,
+      })],
+      healthCheck: {
+        path: '/',
       },
+      port: 80,
+      protocol: elbv2.ApplicationProtocol.HTTP,
     });
 
     // Add the load balancer to the service
