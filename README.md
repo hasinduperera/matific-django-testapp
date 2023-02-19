@@ -1,2 +1,70 @@
-# matific-django-testapp
-Matific Django TestApp
+# Matific Django TestApp
+
+## Content and Explanation / Walkthrough with Future Work Summary
+
+### 1. Infrastructure preparation (3 tier deployment principal) - I should come up with an architecture diagram to showcase below setup (easy to use draw.io in that case)
+
+ - Services :	
+	- Networking :
+		- Single region
+		- Single VPC 
+		- minimum 4 subnets for higher availability ( 2 public subnets for ALB / 2 private subnet for ECS / optional 2 private subnets for EFS/RDS ) We can concider 9 subnets too.
+		- single Internet gateway on public subnets
+		- single NAT gateway on public subnets
+		- Attach private route table to private subnets
+		- Attach public route table to public subnets
+		- DNS :
+			I will be using Route 53 public hosted zone and create A (alias) record set pointing to ALB
+			(If we are using a third party domain registar, I will be concidering to delegate DNS management to Route 53 for higher availability easy management along with some routing methods)
+			
+	- Security :
+		- 2 Security groups ( 1 for ALB / 1 for ECS / optional 1 for EFS/RDS )
+		- WAF attached to ALB with AWS managed rules for the time being and later we can restric further
+		- Also I will be enabling ECR image scanning to find and notify image vulnerabilities
+		- Also I will be concidering cloud custodian rule evaluation to maintain cloud standards and best practices (tagging / naming / security restrictions etc ) as a cloud governance measure
+			
+	- Compute and storage :
+		- I will be using a private ECR repository as docker image registry
+		- I will be also using ECS fargate deployment method to minimize node management overhead. (If we need docker in docker, I will be concidering Kaniko deployment for that)
+		- Also I will be using an ALB infront of the ECS service. We can utilize the same ALB for multiple application services using matching host header and other traffic routing methods
+		- For persistance storages I will be using EFS or RDS as nessasary
+		- Also I will concider auto scaling for the ECS services (tasks) based on the need
+		- If there is any static content, I will be using S3 and cloudfront (CDN) to cater requests for them
+		- Also concider redis/elastic caching in between application and database
+		
+	- Monitoring :
+		- I will be using cloudwatch metrices, alarms (with email subscriptions in SNS) and log groups for container loggings. 
+		- Also I will be creating a dashboard to have a better visibility of the infrastructure perfomance
+		- Also I will be enabling ALB access logs. (If we need to analyse the logs in S3 in any troubleshooting activity, we can use athena to query and find out more)
+		- Also if we are using RDS, I will be enabling perfomance insight for better visibility.
+			
+	- Optimization :
+		- I will be also using trusted advisor and guard duty for better visibility of perfomance / security / cost optimizations
+		- Also I will be concidering fargate_spot for lower environment as a cost optimization
+		- Also I will be checking a way to park the lower environment resources during weekends if no one is utilizing them.
+		- Also I will be setting up budgeting alarms
+			
+	- DR / Backup :
+		- I will be concidering daily backups and enable cross region backups as nessasary.
+		
+	- Nice to have :
+		- I will be using a blue green deployment method which allows for a seamless and low-risk way to release new versions of an application to production.
+		
+### 2. Application deployment preparation
+		
+- Image preparation using dockerfile and docker build for django application :
+	- I will be creating a dockerfile and then create an image first on my local docker registry, then test the application on my local docker setup in my machine first.
+	- Then, only I will push the code to github repository.
+	- Then there should be some static code analysing setup such as sonarqube / veracode or atleast lint checker as a quality gate. If it's passed only someone can review and approve.
+	- Once it is peer reviewed and approved it will be merged to master branch or environmental branch (lower to production ) based on that, github actions will build the image and push it to ECR.
+		
+- Once it's in ECR we can deploy the new application or the latest version to ECS cluster as a roling update :
+
+- folder structure :
+	- application : application source code and dockerfile
+	- infrastructure : infrastructure as code
+	- .github/workflow : github actions
+
+#### I should consider creating application and infrastrucutre/deplpoyment specific reposiotories for better management and also I will consider creating Multi repository deployment where application repository will be accessed from infrastrucutre/deployment repo workflow.
+
+## Solution by Hasindu
